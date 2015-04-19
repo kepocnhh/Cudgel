@@ -7,15 +7,55 @@ using CUETools.Codecs;
 using CUETools.Codecs.FLAKE;
 using System.IO;
 using System.Threading;
+using System.Net;
 
 namespace Cudgel
 {
-    class VoiceRecognition
+
+#region Interface _______________________________
+//                                                                                        \\
+
+    public interface IRecognitionListener
     {
+        void getResponse(StreamReader SR_Response);
+    }
+
+//____________________________________________//
+#endregion
+
+    class VoiceRecognition : IRecognitionListener
+    {
+
+#region FIELDS _________________________________
+//                                                                                        \\
+
         object lockObj = new object();
+        private IRecognitionListener recognitionListener;
+        const string RATE = "16000";
+        const string URL =
+            //"http://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=de-DE&maxresults=1&pfilter=0";
+            "https://www.google.com/speech-api/v2/recognize?output=json&lang=ru-RU&key=AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw";
+
+//____________________________________________//
+#endregion
+
+#region RecognitionListener ________________________
+//                                                                                        \\
+
+        public virtual void getResponse(StreamReader SR_Response)
+        {
+        }
+
+//____________________________________________//
+#endregion
+
         public VoiceRecognition()
         {
-
+            setRecognitionListener(this);
+        }
+        public void setRecognitionListener(IRecognitionListener rl)
+        {
+            recognitionListener = rl;
         }
         private byte[] Wav2FlacBuffConverter(byte[] Buffer)
         {
@@ -44,16 +84,30 @@ namespace Cudgel
         }
         public void recognize(byte[] data)
         {
-            data = Wav2FlacBuffConverter(data);
+            //data = Wav2FlacBuffConverter(data);
             new Thread(postrecognize).Start(data);
         }
-
         private void postrecognize(object obj)
         {
-            byte[] datain = (byte[]) obj;
+            byte[] datain = (byte[])obj;
+            datain = Wav2FlacBuffConverter(datain);
             lock (lockObj)
             {
+                HttpWebRequest _HWR_SpeechToText = null;
+                _HWR_SpeechToText = (HttpWebRequest)WebRequest.Create(URL);
+                _HWR_SpeechToText.Method = "POST";
+                _HWR_SpeechToText.ContentType = "audio/x-flac; rate=" + RATE;
+                _HWR_SpeechToText.ContentLength = datain.Length;
+                using (Stream stream = _HWR_SpeechToText.GetRequestStream())
+                {
+                    stream.Write(datain, 0, datain.Length);
+                    stream.Close();
+                }
+                HttpWebResponse response = (HttpWebResponse)_HWR_SpeechToText.GetResponse();
+                Stream s = response.GetResponseStream();
+                recognitionListener.getResponse(new StreamReader(s));
             }
         }
+
     }
 }

@@ -8,48 +8,60 @@ using NAudio.Wave;
 
 namespace Cudgel
 {
+
+#region Interface _______________________________
+//                                                                                        \\
+
     public interface IMicroListener
     {
         void getAudioLevel(int al);
         void toRecognize(byte[] data);
     }
 
-    class Micro
-    {
-
-#region FIELDS
-//__________FIELDS____________________________\\
-
-        //public Label mixer;
-        //private int min;
-        //private int mid;
-        //private int max;
-        private int audiolevel = 0;
-        private int recordlevel = 0;
-        private WaveIn recorder;
-        private BufferedWaveProvider bufferedWaveProvider;
-        private List<byte[]> buffer;
-        private VoiceRecognition voice;
-        private int TALK_VOLUME = 555;
-        private int TALK_RANG = 4;
-        private int ONE_BUFFER_SIZE = 1600;
-        private IMicroListener microListener;
-
 //____________________________________________//
 #endregion
+
+    class Micro : IMicroListener
+    {
+
+#region FIELDS------------------------------------------------------\\
+
+        private int audiolevel = 0;
+        private WaveIn recorder;
+        private List<byte[]> buffer;
+        private int TALK_VOLUME = 555;
+        private int TALK_RANG = 4;
+        private int ONE_BUFFER_SIZE = 3200;
+        private IMicroListener microListener;
+        
+#endregion _____________________________________//
+
+
+#region MicroListener-----------------------------------------------\\
+
+        public virtual void getAudioLevel(int al)
+        {
+        }
+        public virtual void toRecognize(byte[] data)
+        {
+        }
+
+#endregion _____________________________________//
 
 
         public Micro()
         {
-            //mixer = l;
-            //min = 0;
-            //mid = 0;
-            //max = 0;
+            setMicroListener(this);
+        }
+        public Micro(IMicroListener ml)
+        {
+            setMicroListener(ml);
         }
         public void setMicroListener(IMicroListener ml)
         {
             microListener = ml;
         }
+
         private int GetAudioLevel(byte[] buf)
         {
             int lvl = 0;
@@ -66,24 +78,15 @@ namespace Cudgel
         }
         public void StarTrek()
         {
-            //mixer.Text = "start";
             recorder = new WaveIn();
             recorder.DataAvailable += RecorderOnDataAvailable;
-            //bufferedWaveProvider = new BufferedWaveProvider(recorder.WaveFormat);
             recorder.StartRecording();
             buffer = new List<byte[]>();
-            voice = new VoiceRecognition();
         }
         private void RecorderOnDataAvailable(object sender, WaveInEventArgs w)
         {
-            //mixer.Text = GetAudioLevel(waveInEventArgs.Buffer) + " " + waveInEventArgs.BytesRecorded;
-            //bufferedWaveProvider.AddSamples(waveInEventArgs.Buffer, 0, waveInEventArgs.BytesRecorded);
             audiolevel = GetAudioLevel(w.Buffer);
-            if (microListener != null)
-            {
                 microListener.getAudioLevel(audiolevel);
-            }
-            //mixer.Text = audiolevel  + " ";
             buffer.Add(w.Buffer);
             if (audiolevel > TALK_VOLUME)
             {
@@ -94,7 +97,7 @@ namespace Cudgel
                 }
                 if (GetRecordLevel() > TALK_RANG)
                 {
-                    voice.recognize(audiobuffer);
+                        microListener.toRecognize(audiobuffer);
                 }
             }
             else
@@ -104,7 +107,6 @@ namespace Cudgel
         }
         public void StopRecording()
         {
-            //mixer.Text = "stop";
             recorder.StopRecording();
             buffer = null;
         }

@@ -1,1 +1,5 @@
-
+# just code
+*
+!*.cs
+Form1.Designer.cs
+Program.cs
