@@ -29,9 +29,16 @@ namespace Cudgel
         private int audiolevel = 0;
         private WaveIn recorder;
         private List<byte[]> buffer;
-        private int TALK_VOLUME = 555;
-        private int TALK_RANG = 4;
+        private int TALK_VOLUME = 500;
+        private int TALK_RANG = 6;
         private int ONE_BUFFER_SIZE = 3200;
+        public int CHANELS = 1;
+        public int PRECISION = 16;
+        public int SAMPLE_RATE = 16000;
+        //private int ONE_BUFFER_SIZE = 35280;
+        //public int CHANELS = 2;
+        //public int PRECISION = 32;
+        //public int SAMPLE_RATE = 44100;
         private IMicroListener microListener;
         
 #endregion _____________________________________//
@@ -79,6 +86,7 @@ namespace Cudgel
         public void StarTrek()
         {
             recorder = new WaveIn();
+            recorder.WaveFormat = new WaveFormat(SAMPLE_RATE, PRECISION, CHANELS);
             recorder.DataAvailable += RecorderOnDataAvailable;
             recorder.StartRecording();
             buffer = new List<byte[]>();
@@ -87,28 +95,45 @@ namespace Cudgel
         {
             audiolevel = GetAudioLevel(w.Buffer);
                 microListener.getAudioLevel(audiolevel);
-            buffer.Add(w.Buffer);
             if (audiolevel > TALK_VOLUME)
             {
-                byte[] audiobuffer = new byte[ONE_BUFFER_SIZE * GetRecordLevel()];
-                for (int i = 0; i < buffer.Count; i++)
+                var buf = new byte[ONE_BUFFER_SIZE];
+                w.Buffer.CopyTo(buf, 0);
+                buffer.Add(buf);
+                byte[] audiobuffer = prepareVoice();
+                if (checkReady())
                 {
-                    buffer[i].CopyTo(audiobuffer, i * ONE_BUFFER_SIZE);
-                }
-                if (GetRecordLevel() > TALK_RANG)
-                {
-                        microListener.toRecognize(audiobuffer);
+                    microListener.toRecognize(audiobuffer);
                 }
             }
             else
             {
-                buffer.Clear();
+                if (GetRecordLevel() > 0)
+                {
+                    byte[] audiobuffer = prepareVoice();
+                    microListener.toRecognize(audiobuffer);
+                    buffer.Clear();
+                }
             }
+        }
+        private bool checkReady()
+        {
+            return (GetRecordLevel() / TALK_RANG) * TALK_RANG == GetRecordLevel();
+        }
+        private byte[] prepareVoice()
+        {
+            byte[] audiobuffer = new byte[ONE_BUFFER_SIZE * GetRecordLevel()];
+            for (int i = 0; i < buffer.Count; i++)
+            {
+                buffer[i].CopyTo(audiobuffer, i * ONE_BUFFER_SIZE);
+            }
+            return audiobuffer;
         }
         public void StopRecording()
         {
             recorder.StopRecording();
             buffer = null;
         }
+
     }
 }

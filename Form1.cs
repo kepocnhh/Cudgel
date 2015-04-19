@@ -21,6 +21,8 @@ namespace Cudgel
 
         private Micro micro;
         private VoiceRecognition voice;
+        //private string CONTENT_TYPE = "audio/x-flac";
+        private string CONTENT_TYPE = "audio/l16";
 
 //____________________________________________//
 #endregion
@@ -31,7 +33,7 @@ namespace Cudgel
             //
             micro = new Micro();
             micro.setMicroListener(this);
-            voice = new VoiceRecognition();
+            voice = new VoiceRecognition(micro.SAMPLE_RATE, micro.CHANELS, micro.PRECISION, CONTENT_TYPE);
             voice.setRecognitionListener(this);
         }
 
@@ -40,7 +42,7 @@ namespace Cudgel
 
         public virtual void getAudioLevel(int al)
         {
-            lblmixervalue.Text = al + "";
+            this.MaybeInvoke(() => lblmixervalue.Text  = al+"");
         }
         public virtual void toRecognize(byte[] data)
         {
@@ -61,11 +63,16 @@ namespace Cudgel
             if(json.Length == 0)
             {
                 json = " - empty -";
+                return;
             }
             else
             {
                 GoogleResponse deserialized = (GoogleResponse)serializer.Deserialize(json);
-                json = deserialized.result[0].alternative[0].transcript;
+                json = "";
+                for (int i = 0; i < deserialized.result[0].alternative.Count; i++ )
+                {
+                    json += i+") "+deserialized.result[0].alternative[i].transcript+ " | ";
+                }
             }
             addToList(recognize, json);
             scrollToEnd(recognize);

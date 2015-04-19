@@ -31,9 +31,13 @@ namespace Cudgel
 
         object lockObj = new object();
         private IRecognitionListener recognitionListener;
-        const string RATE = "16000";
+        int RATE;
+        int CHANELS;
+        int SAMPLE_ENCODING;
+        string CONTENT_TYPE;
         const string URL =
             //"http://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=de-DE&maxresults=1&pfilter=0";
+            //"https://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=en-US";
             "https://www.google.com/speech-api/v2/recognize?output=json&lang=ru-RU&key=AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw";
 
 //____________________________________________//
@@ -49,8 +53,12 @@ namespace Cudgel
 //____________________________________________//
 #endregion
 
-        public VoiceRecognition()
+        public VoiceRecognition(int r, int c, int s, string ct)
         {
+            RATE = r;
+            CHANELS = c;
+            SAMPLE_ENCODING = s;
+            CONTENT_TYPE = ct;
             setRecognitionListener(this);
         }
         public void setRecognitionListener(IRecognitionListener rl)
@@ -61,12 +69,12 @@ namespace Cudgel
         {
             Stream OutWavStream = new MemoryStream();
             Stream OutFlacStream = new MemoryStream();
-            AudioPCMConfig pcmconf = new AudioPCMConfig(16, 1, 16000);
+            AudioPCMConfig pcmconf = new AudioPCMConfig(SAMPLE_ENCODING, CHANELS, RATE);
             WAVWriter wr = new WAVWriter(null, OutWavStream, pcmconf);
             wr.Write(new AudioBuffer(pcmconf, Buffer, Buffer.Length / 2));
             OutWavStream.Seek(0, SeekOrigin.Begin);
             WAVReader audioSource = new WAVReader(null, OutWavStream);
-            if (audioSource.PCM.SampleRate != 16000)
+            if (audioSource.PCM.SampleRate != RATE)
             {
                 return null;
             }
@@ -90,13 +98,13 @@ namespace Cudgel
         private void postrecognize(object obj)
         {
             byte[] datain = (byte[])obj;
-            datain = Wav2FlacBuffConverter(datain);
+            //datain = Wav2FlacBuffConverter(datain);
             lock (lockObj)
             {
                 HttpWebRequest _HWR_SpeechToText = null;
                 _HWR_SpeechToText = (HttpWebRequest)WebRequest.Create(URL);
                 _HWR_SpeechToText.Method = "POST";
-                _HWR_SpeechToText.ContentType = "audio/x-flac; rate=" + RATE;
+                _HWR_SpeechToText.ContentType = CONTENT_TYPE + "; rate=" + RATE;
                 _HWR_SpeechToText.ContentLength = datain.Length;
                 using (Stream stream = _HWR_SpeechToText.GetRequestStream())
                 {
